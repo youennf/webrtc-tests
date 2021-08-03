@@ -1,0 +1,12 @@
+<html>
+<head>
+<title>Service Worker Test</title>
+</head>
+<body>
+<script>
+onload = () => {
+    navigator.serviceWorker.register("test-worker.js", { scope : "." }).then(s=> console.log(s), e => console.log(e));
+};
+</script>
+</body>
+</html>

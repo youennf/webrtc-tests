@@ -1,0 +1,2 @@
+addEventListener("fetch", async (e) => {
+});

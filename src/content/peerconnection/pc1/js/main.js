@@ -16,6 +16,8 @@ hangupButton.disabled = true;
 startButton.onclick = start;
 callButton.onclick = call;
 hangupButton.onclick = hangup;
+insertButton.addEventListener('click', () => test.innerHTML = "<video id='testVideo'></video>");
+clearButton.addEventListener('click', () => test.innerHTML = "");
 
 var startTime;
 var localVideo = document.getElementById('localVideo');

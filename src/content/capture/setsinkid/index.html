@@ -1,0 +1,143 @@
+<html>
+<body>
+<style>
+body {
+  font-size: 30px;
+}
+button {
+  font-size: 30px;
+}
+</style>
+<button onclick="capture()">capture</button>
+<br>
+<button onclick="stop()">stop</button>
+<br>
+<label>Speaker1 for mic</label>
+<select name="" id="speaker1">
+</select>
+<br>
+<label>Speaker2 for webaudio</label>
+<select name="" id="speaker2">
+</select>
+<br>
+<label>Speaker3 for webrtc audio</label>
+<select name="" id="speaker3">
+</select>
+<br>
+<button onclick="play1()">play1</button>
+<button onclick="play2()">play2</button>
+<button onclick="play3()">play3</button>
+<br>
+<video id=video1 controls autoplay playsinline width=200px></video>
+<video id=video2 controls autoplay playsinline width=200px></video>
+<video id=video3 controls autoplay playsinline width=200px></video>
+
+<script>
+let stream1;
+let stream2;
+let stream3;
+
+function stop()
+{
+  if (stream1)
+    stream1.getTracks().forEach(t => t.stop());
+  if (stream2)
+    stream2.getTracks().forEach(t => t.stop());
+  if (stream3)
+    stream3.getTracks().forEach(t => t.stop());
+  video1.pause();
+  video2.pause();
+  video3.pause();
+}
+
+async function capture()
+{
+  stream1 = await navigator.mediaDevices.getUserMedia({ audio : true, video : true });
+  stream3 = await createWebRTCAudioStream();
+  navigator.mediaDevices.ondevicechange = () => updateSpeakerList();
+  updateSpeakerList();
+}
+
+let speakers = [];
+let devices;
+async function updateSpeakerList()
+{
+  devices = await navigator.mediaDevices.enumerateDevices();
+  
+  speakers = devices.filter(device => device.kind === "audiooutput");
+  updateList(speaker1);
+  updateList(speaker2);
+  updateList(speaker3);
+}
+
+function updateList(selectTag)
+{
+  selectTag.innerHTML = "";
+  for (let speaker of speakers) {
+    selectTag.innerHTML += "<option value='" + speaker.deviceId + "'>" + speaker.label + "</option>";
+  }
+}
+
+let audioContext;
+function createWebAudioStream()
+{
+   if (stream2)
+     return stream2;
+  	audioContext = new AudioContext;
+  	const gain = new GainNode(audioContext, {gain: 0.05});
+  	const oscillator = new OscillatorNode(audioContext);
+  	oscillator.connect(gain);
+  	oscillator.start();
+
+  	const destination = audioContext.createMediaStreamDestination();
+	  gain.connect(destination);
+    stream2 = destination.stream;
+}
+
+async function createWebRTCAudioStream()
+{
+  const pc1 = new RTCPeerConnection();
+  const pc2 = new RTCPeerConnection();
+  pc1.onicecandidate = (e) => pc2.addIceCandidate(e.candidate);
+  pc2.onicecandidate = (e) => pc1.addIceCandidate(e.candidate);
+
+  pc1.addTrack(stream1.getAudioTracks()[0], stream1);
+
+  let promise = new Promise(resolve => {
+    pc2.ontrack = e => resolve(e.streams[0]);
+  });
+ 
+  await pc1.setLocalDescription();
+  await pc2.setRemoteDescription(pc1.localDescription);
+
+  const answer = await pc2.createAnswer();
+  await pc2.setLocalDescription(answer);
+  await pc1.setRemoteDescription(answer);
+
+  return promise;
+}
+
+function play1()
+{
+    playAudio(video1, stream1, speaker1.selectedOptions[0].value);
+}
+
+function play2()
+{
+    createWebAudioStream();
+    playAudio(video2, stream2, speaker2.selectedOptions[0].value);
+}
+
+function play3()
+{
+    playAudio(video3, stream3, speaker3.selectedOptions[0].value);
+}
+
+async function playAudio(video, stream, deviceId)
+{
+  await video.setSinkId(deviceId);
+  video.srcObject = stream;
+  video.play();
+}
+</script>
+</body>
